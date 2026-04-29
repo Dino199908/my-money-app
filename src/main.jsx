@@ -1,9 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
-import "./styles.css";
 
-const STORAGE_KEY = "mobile-budget-tracker-v4";
+const STORAGE_KEY = "mobile-budget-tracker-v7";
 const categories = ["Food", "Bills", "Gas", "Rent", "Fun", "Shopping", "Savings", "Other"];
 const categoryColors = ["#111827", "#374151", "#6B7280", "#9CA3AF", "#D1D5DB", "#4B5563", "#1F2937", "#E5E7EB"];
 
@@ -15,254 +13,134 @@ const defaultData = {
 };
 
 function money(value) {
-  return Number(value || 0).toLocaleString("en-US", { style: "currency", currency: "USD" });
+  return Number(value || 0).toLocaleString("en-US", {
+    style: "currency",
+    currency: "USD"
+  });
 }
 
-function today() {
+function getToday() {
   return new Date().toISOString().slice(0, 10);
 }
 
-function loadData() {
+function getStoredData() {
   try {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    return saved ? JSON.parse(saved) : defaultData;
+    if (typeof window === "undefined" || !window.localStorage) return defaultData;
+    const saved = window.localStorage.getItem(STORAGE_KEY);
+    return saved ? { ...defaultData, ...JSON.parse(saved) } : defaultData;
   } catch {
     return defaultData;
   }
 }
 
-function App() {
-  const [data, setData] = useState(loadData);
-  const [tab, setTab] = useState("dashboard");
-  const [form, setForm] = useState({
-    type: "expense",
-    category: "Food",
-    amount: "",
-    description: "",
-    date: today()
-  });
+function getMonthTransactions(transactions, selectedMonth) {
+  return transactions.filter((item) => item.date && item.date.startsWith(selectedMonth));
+}
 
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-  }, [data]);
-
-  const monthTransactions = data.transactions.filter((item) =>
-    item.date.startsWith(data.selectedMonth)
-  );
-
-  const spent = monthTransactions
+function getSpent(transactions) {
+  return transactions
     .filter((item) => item.type === "expense")
     .reduce((sum, item) => sum + Number(item.amount || 0), 0);
+}
 
-  const extraIncome = monthTransactions
+function getIncome(transactions) {
+  return transactions
     .filter((item) => item.type === "income")
     .reduce((sum, item) => sum + Number(item.amount || 0), 0);
+}
 
-  const left = data.monthlyIncome + extraIncome - spent;
+function getChartData(transactions) {
+  const grouped = {};
 
-  const chartData = useMemo(() => {
-    const grouped = {};
-    monthTransactions
-      .filter((item) => item.type === "expense")
-      .forEach((item) => {
-        grouped[item.category] = (grouped[item.category] || 0) + Number(item.amount || 0);
-      });
-
-    return Object.entries(grouped).map(([name, value]) => ({ name, value }));
-  }, [monthTransactions]);
-
-  const addTransaction = () => {
-    const amount = Number(form.amount);
-    if (!amount || amount <= 0) return;
-
-    const transaction = {
-      id: Date.now(),
-      type: form.type,
-      category: form.type === "income" ? "Other" : form.category,
-      amount,
-      description: form.description || (form.type === "income" ? "Income" : form.category),
-      date: form.date || today()
-    };
-
-    setData({
-      ...data,
-      selectedMonth: transaction.date.slice(0, 7),
-      transactions: [transaction, ...data.transactions]
+  transactions
+    .filter((item) => item.type === "expense")
+    .forEach((item) => {
+      grouped[item.category] = (grouped[item.category] || 0) + Number(item.amount || 0);
     });
 
-    setForm({
-      type: "expense",
-      category: "Food",
-      amount: "",
-      description: "",
-      date: today()
-    });
+  return Object.entries(grouped).map(([name, value]) => ({ name, value }));
+}
 
-    setTab("dashboard");
-  };
+function getGoalProgress(left, monthlyGoal) {
+  if (!monthlyGoal || monthlyGoal <= 0) return 0;
+  return Math.min(100, Math.max(0, Math.round((left / monthlyGoal) * 100)));
+}
 
-  const deleteTransaction = (id) => {
-    setData({
-      ...data,
-      transactions: data.transactions.filter((item) => item.id !== id)
-    });
-  };
+function getLargestCategory(chartData) {
+  if (!chartData.length) return null;
+  return [...chartData].sort((a, b) => b.value - a.value)[0];
+}
+
+function runTests() {
+  const testTransactions = [
+    { type: "expense", category: "Food", date: "2026-04-01", amount: 10 },
+    { type: "expense", category: "Food", date: "2026-04-02", amount: 5 },
+    { type: "income", category: "Other", date: "2026-04-03", amount: 100 },
+    { type: "expense", category: "Gas", date: "2026-05-01", amount: 20 }
+  ];
+
+  console.assert(getMonthTransactions(testTransactions, "2026-04").length === 3, "April should have 3 transactions");
+  console.assert(getSpent(testTransactions) === 35, "Total expenses should equal 35");
+  console.assert(getIncome(testTransactions) === 100, "Total income should equal 100");
+  console.assert(getChartData(testTransactions).find((item) => item.name === "Food")?.value === 15, "Food chart total should equal 15");
+  console.assert(money(12.5) === "$12.50", "Money formatter should format USD");
+  console.assert(getGoalProgress(50, 100) === 50, "Goal progress should equal 50");
+  console.assert(getGoalProgress(150, 100) === 100, "Goal progress should cap at 100");
+  console.assert(getLargestCategory([{ name: "Food", value: 15 }, { name: "Gas", value: 25 }])?.name === "Gas", "Largest category should be Gas");
+}
+
+runTests();
+
+function SimpleCategoryChart({ data }) {
+  const maxValue = Math.max(...data.map((item) => item.value), 1);
 
   return (
-    <main className="app">
-      <section className="card hero">
-        <p className="muted">Budget Tracker</p>
-        <h1>My Money</h1>
-        <p className="save">Saved on this device</p>
-
-        <label>
-          Month
-          <input
-            type="month"
-            value={data.selectedMonth}
-            onChange={(e) => setData({ ...data, selectedMonth: e.target.value })}
-          />
-        </label>
-
-        <div className="balance">
-          <p>Left this month</p>
-          <h2>{money(left)}</h2>
-          <small>Spent: {money(spent)}</small>
-        </div>
-      </section>
-
-      {tab === "dashboard" && (
-        <>
-          <section className="grid">
-            <div className="card">
-              <p className="muted">Income</p>
-              <h3>{money(data.monthlyIncome + extraIncome)}</h3>
+    <div style={{ display: "grid", gap: 12 }}>
+      {data.map((item, index) => {
+        const width = `${Math.max(8, Math.round((item.value / maxValue) * 100))}%`;
+        return (
+          <div key={item.name}>
+            <div style={{ display: "flex", justifyContent: "space-between" }}>
+              <span>{item.name}</span>
+              <strong>{money(item.value)}</strong>
             </div>
-            <div className="card">
-              <p className="muted">Expenses</p>
-              <h3>{money(spent)}</h3>
+            <div style={{ height: 10, background: "#333", borderRadius: 999 }}>
+              <div
+                style={{
+                  width,
+                  height: "100%",
+                  background: categoryColors[index % categoryColors.length],
+                  borderRadius: 999
+                }}
+              />
             </div>
-          </section>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
-          <section className="card">
-            <h3>Spending by category</h3>
-            <div className="chart">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie data={chartData} dataKey="value" nameKey="name" outerRadius={80}>
-                    {chartData.map((_, index) => (
-                      <Cell key={index} fill={categoryColors[index % categoryColors.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip formatter={(value) => money(value)} />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-          </section>
+function App() {
+  const [data, setData] = useState(getStoredData);
 
-          <section className="card">
-            <h3>Recent transactions</h3>
-            {monthTransactions.length === 0 && <p className="muted">No transactions yet.</p>}
-            {monthTransactions.map((item) => (
-              <div className="row" key={item.id}>
-                <div>
-                  <strong>{item.description}</strong>
-                  <p className="muted">{item.type === "income" ? "Income" : item.category} • {item.date}</p>
-                </div>
-                <div className="right">
-                  <strong>{item.type === "income" ? "+" : "-"}{money(item.amount)}</strong>
-                  <button onClick={() => deleteTransaction(item.id)}>Delete</button>
-                </div>
-              </div>
-            ))}
-          </section>
-        </>
-      )}
+  const monthTransactions = useMemo(
+    () => getMonthTransactions(data.transactions, data.selectedMonth),
+    [data.transactions, data.selectedMonth]
+  );
 
-      {tab === "add" && (
-        <section className="card">
-          <h3>Add transaction</h3>
+  const spent = getSpent(monthTransactions);
+  const income = getIncome(monthTransactions);
+  const chartData = getChartData(monthTransactions);
+  const left = data.monthlyIncome + income - spent;
 
-          <label>
-            Type
-            <select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })}>
-              <option value="expense">Expense</option>
-              <option value="income">Income</option>
-            </select>
-          </label>
-
-          <label>
-            Date
-            <input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
-          </label>
-
-          {form.type === "expense" && (
-            <label>
-              Category
-              <select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>
-                {categories.map((category) => (
-                  <option key={category}>{category}</option>
-                ))}
-              </select>
-            </label>
-          )}
-
-          <label>
-            Amount
-            <input
-              inputMode="decimal"
-              type="number"
-              min="0"
-              step="0.01"
-              value={form.amount}
-              onChange={(e) => setForm({ ...form, amount: e.target.value })}
-              placeholder="0.00"
-            />
-          </label>
-
-          <label>
-            Description
-            <input
-              value={form.description}
-              onChange={(e) => setForm({ ...form, description: e.target.value })}
-              placeholder="Example: Groceries"
-            />
-          </label>
-
-          <button className="primary" onClick={addTransaction}>Save</button>
-        </section>
-      )}
-
-      {tab === "settings" && (
-        <section className="card">
-          <h3>Settings</h3>
-          <label>
-            Monthly income
-            <input
-              type="number"
-              value={data.monthlyIncome}
-              onChange={(e) => setData({ ...data, monthlyIncome: Number(e.target.value || 0) })}
-            />
-          </label>
-          <label>
-            Savings goal
-            <input
-              type="number"
-              value={data.monthlyGoal}
-              onChange={(e) => setData({ ...data, monthlyGoal: Number(e.target.value || 0) })}
-            />
-          </label>
-        </section>
-      )}
-
-      <nav>
-        <button className={tab === "dashboard" ? "active" : ""} onClick={() => setTab("dashboard")}>Home</button>
-        <button className={tab === "add" ? "active" : ""} onClick={() => setTab("add")}>Add</button>
-        <button className={tab === "settings" ? "active" : ""} onClick={() => setTab("settings")}>Setup</button>
-      </nav>
-    </main>
+  return (
+    <div style={{ padding: 20, background: "#111", color: "white", minHeight: "100vh" }}>
+      <h1>My Money</h1>
+      <p>Left: {money(left)}</p>
+      <SimpleCategoryChart data={chartData} />
+    </div>
   );
 }
 
 createRoot(document.getElementById("root")).render(<App />);
-// update
