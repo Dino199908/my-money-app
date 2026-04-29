@@ -183,11 +183,11 @@ function App() {
     else { await navigator.clipboard.writeText(text); alert("Share code copied."); }
   };
 
-  if (!supabase) return <main style={{ padding: 20 }}>Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in Vercel environment variables.</main>;
+  if (!supabase) return <main translate="no" className="notranslate" style={{ padding: 20 }}>Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in Vercel environment variables.</main>;
 
   if (!session) {
     return (
-      <main style={styles.page}>
+      <main translate="no" className="notranslate" style={styles.page}>
         <section style={styles.phone}>
           <section style={styles.hero}>
             <p style={styles.kicker}>Shared Budget</p>
@@ -200,17 +200,16 @@ function App() {
             <button style={styles.primaryButton} onClick={signInWithPassword}>Sign In</button>
             <button style={styles.secondaryButton} onClick={createAccount}>Create Account</button>
             {authMessage && <p style={{ ...styles.muted, marginTop: 12 }}>{authMessage}</p>}
-            {authMessage && <p style={{ ...styles.muted, marginTop: 12 }}>{authMessage}</p>}
           </section>
         </section>
       </main>
     );
   }
 
-  if (!budget) return <main style={styles.page}><section style={styles.phone}><section style={styles.card}>Loading budget...</section></section></main>;
+  if (!budget) return <main translate="no" className="notranslate" style={styles.page}><section style={styles.phone}><section style={styles.card}>Loading budget...</section></section></main>;
 
   return (
-    <main style={styles.page}>
+    <main translate="no" className="notranslate" style={styles.page}>
       <section style={styles.phone}>
         <header style={styles.hero}>
           <div style={styles.topRow}>
