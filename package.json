@@ -1,7 +1,7 @@
 {
-  "name": "my-money-budget-tracker",
+  "name": "my-money-shared-budget",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -13,8 +13,7 @@
     "vite": "latest",
     "react": "latest",
     "react-dom": "latest",
-    "framer-motion": "latest",
-    "recharts": "latest"
+    "@supabase/supabase-js": "latest"
   },
   "devDependencies": {}
 }
