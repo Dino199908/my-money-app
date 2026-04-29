@@ -1,30 +1,18 @@
-# My Money Budget Tracker
-
-Mobile-friendly React + Vite PWA budget tracker.
-
-## Run locally
-
-```bash
-npm install
-npm run dev
-```
-
-## Deploy to Vercel
-
-1. Upload this folder to GitHub.
-2. Go to Vercel.
-3. New Project.
-4. Import the GitHub repo.
-5. Framework Preset: Vite.
-6. Build Command: `npm run build`.
-7. Output Directory: `dist`.
-8. Deploy.
-
-## Install on iPhone
-
-1. Open the deployed link in Safari.
-2. Tap Share.
-3. Tap Add to Home Screen.
-4. Tap Add.
-
-Data saves locally on that iPhone using localStorage. Use Backup Data inside the app if you want an extra copy.
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#0a0a0a" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="My Money" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="/icon-192.svg" />
+    <title>My Money Budget Tracker</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
