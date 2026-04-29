@@ -256,4 +256,17 @@ function makeStyles(theme) {
   };
 }
 
-createRoot(document.getElementById("root")).render(<App />);
+const rootElement = document.getElementById("root");
+rootElement.setAttribute("translate", "no");
+rootElement.className = "notranslate";
+
+let appMount = document.getElementById("app-mount");
+if (!appMount) {
+  appMount = document.createElement("div");
+  appMount.id = "app-mount";
+  appMount.setAttribute("translate", "no");
+  appMount.className = "notranslate";
+  rootElement.replaceChildren(appMount);
+}
+
+createRoot(appMount).render(<App />);
